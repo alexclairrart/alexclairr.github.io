@@ -86,50 +86,49 @@ else
   echo "[pre-commit] No new/modified images in this commit."
 fi
 
-# ===== PART 2: Validate ALL existing images =====
+# ===== PART 2: Validate STAGED images only =====
 echo
-echo "[pre-commit] Step 2: Validating ALL images in repository..."
+echo "[pre-commit] Step 2: Validating staged images in this commit..."
 
-# Get all image files in the repository
-all_images=$(git ls-files | grep -Ei '\.(jpe?g|png|webp)$' || true)
+# Get staged image files for this commit (including processed ones from Part 1)
+staged_images=$(git diff --cached --name-only | grep -Ei '\.(jpe?g|png|webp)$' || true)
 
-if [ -z "$all_images" ]; then
-  echo "[pre-commit] No images found in repository."
-  exit 0
-fi
+if [ -z "$staged_images" ]; then
+  echo "[pre-commit] No staged images to validate."
+else
+  echo "[pre-commit] Checking $(echo "$staged_images" | wc -l) staged images for watermarks and EXIF compliance..."
 
-echo "[pre-commit] Checking $(echo "$all_images" | wc -l) images for watermarks and EXIF compliance..."
-
-# Check watermarks on all images
-echo "[pre-commit] Verifying watermarks..."
-if ! "$PYTHON" "$WATERMARK_SCRIPT" verify $all_images; then
-  echo "[pre-commit] ✗ Some images are missing watermarks!"
-  exit 1
-fi
-
-# Check EXIF on all images (skip files in skip list)
-echo "[pre-commit] Verifying EXIF compliance..."
-bad_exif=0
-for f in $all_images; do
-  # Skip files that are in the skip list
-  if [ "$f" = "assets/pics/lelem.png" ]; then
-    echo "[pre-commit] ⏭ Skipping EXIF check for: $f"
-    continue
+  # Check watermarks on staged images only
+  echo "[pre-commit] Verifying watermarks on staged images..."
+  if ! "$PYTHON" "$WATERMARK_SCRIPT" verify $staged_images; then
+    echo "[pre-commit] ✗ Some staged images are missing watermarks!"
+    exit 1
   fi
-  
-  # Check for potentially sensitive metadata (GPS, camera settings, etc.)
-  # Allow basic file info, dimensions, format info, and copyright fields
-  sensitive=$(exiftool -s -S -all:all "$f" | grep -iE '^(GPS|Camera|Make|Model|SerialNumber|LensInfo|ExposureTime|ISO|FocalLength|Flash|WhiteBalance|MeteringMode|ExposureMode|SceneCaptureType|Orientation|Software|ModifyDate|CreateDate|DateTimeOriginal|UserComment|ImageDescription|XPComment|XPAuthor|XPKeywords|XPSubject|ProcessingSoftware|HostComputer|ThumbnailImage):' || true)
-  if [ -n "$sensitive" ]; then
-    echo "[pre-commit] ✗ $f contains sensitive metadata:"
-    echo "$sensitive" | sed 's/^/    /'
-    bad_exif=1
-  fi
-done
 
-if [ $bad_exif -eq 1 ]; then
-  echo "[pre-commit] ✗ Some images have unauthorized EXIF data!"
-  exit 1
+  # Check EXIF on staged images only (skip files in skip list)
+  echo "[pre-commit] Verifying EXIF compliance on staged images..."
+  bad_exif=0
+  for f in $staged_images; do
+    # Skip files that are in the skip list
+    if [ "$f" = "assets/pics/lelem.png" ]; then
+      echo "[pre-commit] ⏭ Skipping EXIF check for: $f"
+      continue
+    fi
+    
+    # Check for potentially sensitive metadata (GPS, camera settings, etc.)
+    # Allow basic file info, dimensions, format info, and copyright fields
+    sensitive=$(exiftool -s -S -all:all "$f" | grep -iE '^(GPS|Camera|Make|Model|SerialNumber|LensInfo|ExposureTime|ISO|FocalLength|Flash|WhiteBalance|MeteringMode|ExposureMode|SceneCaptureType|Orientation|Software|ModifyDate|CreateDate|DateTimeOriginal|UserComment|ImageDescription|XPComment|XPAuthor|XPKeywords|XPSubject|ProcessingSoftware|HostComputer|ThumbnailImage):' || true)
+    if [ -n "$sensitive" ]; then
+      echo "[pre-commit] ✗ $f contains sensitive metadata:"
+      echo "$sensitive" | sed 's/^/    /'
+      bad_exif=1
+    fi
+  done
+
+  if [ $bad_exif -eq 1 ]; then
+    echo "[pre-commit] ✗ Some staged images have unauthorized EXIF data!"
+    exit 1
+  fi
 fi
 
 echo "[pre-commit] ✓ All images passed validation!"
