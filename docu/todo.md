@@ -1,6 +1,6 @@
 # TODOs
 
-Configurer un recovery email dédié (au lieu de ton mail perso).
+Configurer un recovery email dédié (au lieu de ton mail perso)
 Vérifier que tous tes commits Git sont avec l’email noreply GitHub.
 ✅ Ajouter un .gitignore pour nettoyer .DS_Store etc.
 ✅ Nettoyer les EXIF/IPTC de toutes les photos.

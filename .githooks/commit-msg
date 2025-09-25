@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Get the commit message file
+COMMIT_MSG_FILE="$1"
+
+# Read current version from VERSION file
+if [ -f "VERSION" ]; then
+    VERSION=$(cat VERSION | tr -d '\n')
+else
+    VERSION="0.0.0"
+fi
+
+# Read the original commit message
+ORIGINAL_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Only prepend version if the message doesn't already start with v[version]
+if [[ ! $ORIGINAL_MSG =~ ^v[0-9]+\.[0-9]+\.[0-9]+\  ]]; then
+    # Prepend version to commit message
+    echo "v$VERSION $ORIGINAL_MSG" > "$COMMIT_MSG_FILE"
+fi

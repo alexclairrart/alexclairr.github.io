@@ -133,3 +133,30 @@ fi
 
 echo "[pre-commit] ✓ All images passed validation!"
 echo "[pre-commit] Image processing complete."
+
+# ===== PART 4: Increment VERSION file =====
+echo "[pre-commit] Step 4: Incrementing version..."
+
+# Check if VERSION file exists
+if [ -f "VERSION" ]; then
+  current_version=$(cat VERSION)
+  echo "[pre-commit] Current version: $current_version"
+  
+  # Parse version (assuming format: major.minor.patch)
+  IFS='.' read -r major minor patch <<< "$current_version"
+  
+  # Increment patch version
+  new_patch=$((patch + 1))
+  new_version="$major.$minor.$new_patch"
+  
+  # Update VERSION file
+  echo "$new_version" > VERSION
+  
+  # Stage the updated VERSION file
+  git add VERSION
+  
+  echo "[pre-commit] ✓ Version incremented to: $new_version"
+else
+  echo "[pre-commit] ✗ VERSION file not found!"
+  exit 1
+fi
