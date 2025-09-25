@@ -1,396 +1,189 @@
-# Image Validation System Documentation
+# Image Validation System - Developer Guide
 
-This repository uses a comprehensive multi-layer image validation system to ensure all artwork is properly protected and free from sensitive metadata before publication.
+WebP-only photography portfolio with automated image protection and validation.
 
-## 🎯 Overview
+## 🚀 Quick Start (Developer Workflow)
 
-The system provides **three layers of protection**:
+### 1. Add Images (Any Format)
 
-1. **Pre-commit hooks** - Local validation before commits
-2. **GitHub Actions** - Remote validation before deployment
-3. **Local testing** - Test GitHub workflows locally
-
-## 🏗️ System Architecture
-
-```
-Developer Workflow:
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│   Local Work    │───▶│   Pre-commit     │───▶│   GitHub Actions    │
-│                 │    │   Validation     │    │   Validation        │
-│ • Add images    │    │ • EXIF cleanup   │    │ • EXIF verification │
-│ • Modify files  │    │ • Watermarking   │    │ • Watermark check   │
-│                 │    │ • Fast (staged   │    │ • Comprehensive     │
-│                 │    │   files only)    │    │   (all files)       │
-└─────────────────┘    └──────────────────┘    └─────────────────────┘
-                              │                           │
-                              ▼                           ▼
-                       ✅ Commit allowed         ✅ Deployment allowed
-                       ❌ Commit blocked         ❌ Deployment blocked
-```
-
-## 📋 Components
-
-### 1. Pre-commit Hook (`.githooks/pre-commit`)
-
-**What it does:**
-
-- Automatically processes new/modified images during commits
-- Applies invisible watermarks to protect artwork
-- Strips sensitive EXIF metadata (GPS, camera info, dates)
-- Adds copyright information to EXIF data
-
-**Key features:**
-
-- Converts JPEG to PNG to preserve watermarks
-- Validates ONLY staged/modified images for fast commits
-- Skips specific files (e.g., `assets/pics/lelem.webp`)
-- Blocks commits if validation fails
-
-**Dependencies:**
-
-- Python 3 with `invisible-watermark` and `opencv-python`
-- `exiftool` for metadata management
-
-### 2. GitHub Actions Workflows
-
-#### 🔍 EXIF Guard (`.github/workflows/exif-guard.yml`)
-
-**Triggers:** Push to main, Pull requests
-**Purpose:** Verify no images contain sensitive metadata
-
-**What it checks:**
-
-- GPS coordinates
-- Camera make/model/serial numbers
-- Technical shooting data (ISO, exposure, focal length)
-- Software/processing information
-- User comments and descriptions
-- Timestamps and modification dates
-
-**Allowed metadata:**
-
-- Basic file format information
-- Image dimensions and color profiles
-- Copyright fields (Artist, Creator, Copyright)
-
-#### 🖼️ Watermark Check (`.github/workflows/check-watermark.yml`)
-
-**Triggers:** Push to main, Pull requests
-**Purpose:** Ensure all images have invisible watermarks
-
-**What it does:**
-
-- Scans ALL images in repository for invisible watermark presence
-- Uses the same watermarking script as pre-commit hook
-- Respects skip lists for excluded files
-- Fails if any image is missing a watermark
-- Provides comprehensive watermark validation (unlike pre-commit's staged-only check)
-
-### 3. Local Testing Script (`test-github-workflows.sh`)
-
-**Purpose:** Test GitHub Actions workflows locally before pushing
-
-**Usage:**
+Drop your images into `assets/pics/` - JPG, PNG, whatever format:
 
 ```bash
-# Interactive mode
-./test-github-workflows.sh
-
-# Test specific workflows
-./test-github-workflows.sh 1   # EXIF only
-./test-github-workflows.sh 2   # Watermark only
-./test-github-workflows.sh 3   # Both workflows
+cp ~/my-photos/*.jpg assets/pics/
 ```
 
-**Requirements:**
+### 2. Convert to WebP (Lossless)
 
-- Docker installed and running
-- `act` tool: `brew install act`
-
-## 🔧 Setup Instructions
-
-### Initial Setup
-
-1. **Install dependencies:**
-
-   ```bash
-   # Python dependencies
-   pip install -r requirements.txt
-
-   # System tools
-   brew install exiftool act
-   ```
-
-2. **Configure Git hooks:**
-
-   ```bash
-   git config core.hooksPath .githooks
-   chmod +x .githooks/pre-commit
-   ```
-
-3. **Make test scripts executable:**
-   ```bash
-   chmod +x test-github-workflows.sh
-   chmod +x test-*.sh
-   ```
-
-### Workflow Integration
-
-The system is designed to work seamlessly:
-
-1. **Developer adds/modifies images** → Pre-commit automatically processes them
-2. **Developer pushes changes** → GitHub Actions verify compliance
-3. **All checks pass** → Changes are deployed
-4. **Any check fails** → Deployment is blocked until fixed
-
-## 🛠️ Usage
-
-### Adding New Images
-
-When you add new images to the repository:
-
-1. **Add the image file normally:**
-
-   ```bash
-   git add assets/pics/new-artwork.jpg
-   ```
-
-2. **Commit triggers pre-commit processing:**
-
-   ```bash
-   git commit -m "Add new artwork"
-   # Pre-commit automatically (FAST - only processes staged files):
-   # - Applies invisible watermark to new/modified images
-   # - Converts JPEG to PNG if needed
-   # - Strips sensitive EXIF data
-   # - Adds copyright information
-   # - Re-stages processed files
-   # - Validates only the images you're committing
-   ```
-
-3. **Push triggers GitHub validation:**
-   ```bash
-   git push
-   # GitHub Actions verify (COMPREHENSIVE - checks all 100+ images):
-   # - No sensitive metadata present in ANY image
-   # - ALL images have watermarks
-   # - Complete repository compliance
-   ```
-
-### Testing Locally
-
-Before pushing, you can test the exact GitHub workflows:
+Run the conversion script to get lossless WebP files:
 
 ```bash
-# Test both workflows (recommended)
-./test-github-workflows.sh 3
-
-# Or test individually
-./test-exif-local.sh      # Simple EXIF check
-./test-watermark-local.sh # Simple watermark check
+python scripts/convert_to_webp.py --overwrite
 ```
 
-## ⚡ Performance Optimization
+### 3. Commit Changes
 
-The system is designed for optimal developer experience:
+Git hooks handle watermarking, EXIF cleanup, and validation automatically:
 
-### **Pre-commit Hook (Fast)**
-
-- ✅ **Processes only staged files** - New/modified images in current commit
-- ✅ **Quick validation** - Only validates images being committed
-- ✅ **Fast commits** - No need to check entire repository
-- ⚠️ **Limited scope** - Doesn't catch issues in existing files
-
-### **GitHub Actions (Comprehensive)**
-
-- ✅ **Validates ALL images** - Complete repository scan
-- ✅ **Catches everything** - No issues slip through to deployment
-- ✅ **Final safety net** - Comprehensive validation before publish
-- ⚠️ **Slower execution** - Scans 100+ images but ensures complete compliance
-
-### **Why This Design Works:**
-
-1. **Developer productivity** - Fast local commits encourage frequent saves
-2. **Complete security** - GitHub Actions ensure nothing malicious reaches production
-3. **Early feedback** - Most issues caught locally during development
-4. **Final validation** - Comprehensive check before deployment
-
-## ⚡ Performance Optimization
-
-The system is designed for optimal developer experience:
-
-### **Pre-commit Hook (Fast)**
-
-- ✅ **Processes only staged files** - New/modified images in current commit
-- ✅ **Quick validation** - Only validates images being committed
-- ✅ **Fast commits** - No need to check entire repository
-- ⚠️ **Limited scope** - Doesn't catch issues in existing files
-
-### **GitHub Actions (Comprehensive)**
-
-- ✅ **Validates ALL images** - Complete repository scan
-- ✅ **Catches everything** - No issues slip through to deployment
-- ✅ **Final safety net** - Comprehensive validation before publish
-- ⚠️ **Slower execution** - Scans 100+ images but ensures complete compliance
-
-### **Why This Design Works:**
-
-1. **Developer productivity** - Fast local commits encourage frequent saves
-2. **Complete security** - GitHub Actions ensure nothing malicious reaches production
-3. **Early feedback** - Most issues caught locally during development
-4. **Final validation** - Comprehensive check before deployment
-
-## 🔒 Security Features
-
-### Watermark Protection
-
-- **Invisible watermarks** using steganography
-- **Copyright text:** `© Alex Clairr 2025` embedded in image data
-- **Format conversion:** JPEG → PNG to preserve watermarks
-- **Verification:** All images checked for watermark presence
-
-### EXIF Privacy Protection
-
-- **Strips sensitive data:** GPS, camera info, timestamps
-- **Preserves copyright:** Artist, Creator, Copyright fields maintained
-- **Comprehensive scanning:** Checks all tracked images
-- **Skip list support:** Excludes specific files when needed
-
-### Multi-layer Validation
-
-- **Pre-commit:** Prevents bad commits locally
-- **GitHub Actions:** Prevents bad deployments remotely
-- **Consistent logic:** Same validation rules across all layers
-
-## 📁 File Structure
-
+```bash
+git add .
+git commit -m "Add new photography"
 ```
-alexclairr.github.io/
-├── .github/workflows/
-│   ├── exif-guard.yml           # EXIF validation workflow
-│   └── check-watermark.yml      # Watermark validation workflow
-├── .githooks/
-│   ├── pre-commit              # Main pre-commit hook
-│   └── watermark.py            # Watermarking script
-├── assets/pics/                 # Image gallery
-│   ├── 001.jpg → 001.png       # Auto-converted by pre-commit
-│   ├── 002.png                 # Processed images
-│   └── lelem.webp               # Skip-listed file
-├── docu/
-│   └── image-validation.md     # This documentation
-├── requirements.txt            # Python dependencies
-├── test-github-workflows.sh    # Local GitHub Actions testing
-├── test-exif-local.sh         # Simple EXIF test
-└── test-watermark-local.sh    # Simple watermark test
+
+That's it! The system handles protection and validation automatically.
+
+## ⚙️ Environment Setup
+
+### Dependencies
+
+Install required packages:
+
+```bash
+# Python packages
+pip install -r requirements.txt
+
+# System tools (macOS)
+brew install exiftool
+
+# System tools (Ubuntu/GitHub Actions)
+sudo apt-get install exiftool
+```
+
+### Git Hooks Setup
+
+```bash
+# Enable git hooks
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
+
+### Local Testing Setup (Optional)
+
+To test GitHub workflows locally before pushing:
+
+```bash
+# Install act (runs GitHub Actions locally)
+brew install act
+
+# Install Docker (required by act)
+# Download from https://www.docker.com/products/docker-desktop/
+# Or install via brew: brew install --cask docker
+
+# Make test script executable
+chmod +x scripts/test-github-workflows.sh
+```
+
+## 🔧 How It Works
+
+### Pre-commit Hook (Automatic)
+
+When you `git commit`, the hook automatically:
+
+1. **Watermarks** new WebP images with invisible copyright
+2. **Strips** sensitive EXIF data (GPS, camera info, dates)
+3. **Adds** copyright info to remaining EXIF data
+4. **Validates** image format compliance (WebP + ICO only)
+5. **Increments** version number
+
+### GitHub Workflows (Automatic)
+
+#### `webp-exif-guard` - EXIF Validation
+
+- Scans all WebP files for sensitive metadata
+- Ensures no GPS, camera, or personal data leaked
+- Runs on every push/PR
+
+#### `check-webp-watermark` - Watermark Validation
+
+- Verifies all WebP images contain invisible watermarks
+- Protects against unauthorized image usage
+- Runs on every push/PR
+
+## 🧪 Testing
+
+### Local Workflow Testing
+
+Test GitHub Actions locally before pushing (requires Docker + act setup):
+
+```bash
+# Test both workflows multiple times to catch edge cases
+./scripts/test-github-workflows.sh 3
+
+# What this does:
+# - Runs webp-exif-guard workflow locally using Docker
+# - Runs check-webp-watermark workflow locally using Docker
+# - Repeats 3 times to catch intermittent issues
+# - Uses same Ubuntu environment as GitHub Actions
+# - Validates your changes before pushing to GitHub
+```
+
+**First time setup requirements:**
+
+1. Docker Desktop must be running
+2. `act` tool installed (`brew install act`)
+3. Script permissions set (`chmod +x scripts/test-github-workflows.sh`)
+
+**Troubleshooting local tests:**
+
+```bash
+# If act fails on M1 Macs, specify architecture:
+act --container-architecture linux/amd64
+
+# Check Docker is running:
+docker ps
+```
+
+### Manual Validation
+
+```bash
+# Check watermarks manually
+python .githooks/watermark.py verify assets/pics/*.webp
+
+# Check EXIF manually
+exiftool assets/pics/*.webp
 ```
 
 ## 🚨 Troubleshooting
 
-### Common Issues
-
-**Pre-commit fails:**
+### Pre-commit Failures
 
 ```bash
-# Check Python dependencies
-pip install -r requirements.txt
+# Convert images first
+python scripts/convert_to_webp.py --overwrite
 
-# Verify exiftool installation
-brew install exiftool
+# Remove non-WebP files from assets
+find assets -name "*.jpg" -o -name "*.png" | xargs rm
 
-# Check hook permissions
-chmod +x .githooks/pre-commit
+# Try commit again
+git add . && git commit -m "Your message"
 ```
 
-**GitHub Actions fail:**
-
-- Check the Actions tab in your GitHub repository
-- Verify all images pass local tests first
-- Ensure no sensitive metadata was accidentally introduced
-
-**Local testing issues:**
+### Watermark Issues
 
 ```bash
-# Install act if missing
-brew install act
-
-# Check Docker is running
-docker ps
-
-# Use correct architecture for M1 Macs
-act --container-architecture linux/amd64
+# Re-apply watermarks
+python .githooks/watermark.py apply assets/pics/*.webp
 ```
 
-### Skip Lists
-
-To exclude specific files from validation, update the skip lists:
-
-**Pre-commit hook:** Edit `SKIP_FILES` in `.githooks/watermark.py`
-**GitHub workflows:** Edit the skip conditions in workflow YAML files
-
-Example:
+### EXIF Issues
 
 ```bash
-if [ "$f" = "assets/pics/lelem.webp" ]; then
-    echo "⏭ Skipping EXIF check for: $f"
-    continue
-fi
+# Strip all EXIF and re-add copyright
+exiftool -all= -Artist="Alex Clairr" -Copyright="© 2025 Alex Clairr" assets/pics/*.webp
 ```
 
-## 🔄 Maintenance
-
-### Regular Tasks
-
-1. **Update dependencies** periodically:
-
-   ```bash
-   pip install -r requirements.txt --upgrade
-   brew upgrade exiftool act
-   ```
-
-2. **Test workflows** before major releases:
-
-   ```bash
-   ./test-github-workflows.sh 3
-   ```
-
-3. **Monitor GitHub Actions** for any failures and address promptly
-
-### Adding New Image Formats
-
-To support additional image formats:
-
-1. Update the file pattern in all validation scripts:
-
-   ```bash
-   # Change this pattern:
-   grep -Ei '\.(jpe?g|png|webp)$'
-
-   # To include new formats:
-   grep -Ei '\.(jpe?g|png|webp|avif|tiff)$'
-   ```
-
-2. Test with the new format to ensure compatibility
-
-## 📊 Validation Results
-
-When everything works correctly, you'll see output like:
-
-**Pre-commit:**
+## 📁 File Structure
 
 ```
-✓ Watermark applied: assets/pics/new-image.jpg
-🔄 Converted to PNG: assets/pics/new-image.png
-✓ EXIF processed and re-staged: assets/pics/new-image.png
+├── assets/pics/           # WebP images only
+├── scripts/
+│   ├── convert_to_webp.py # Lossless conversion script
+│   └── test-github-workflows.sh
+├── .githooks/
+│   ├── pre-commit         # Main validation hook
+│   └── watermark.py       # Watermarking script
+└── .github/workflows/
+    ├── webp-exif-guard.yml
+    └── check-webp-watermark.yml
 ```
 
-**GitHub Actions:**
-
-```
-✓ EXIF verified: assets/pics/001.png
-✓ EXIF verified: assets/pics/002.png
-⏭ Skipping EXIF check for: assets/pics/lelem.webp
-✓ Watermark verified: assets/pics/001.png
-✓ Watermark verified: assets/pics/002.png
-```
-
-This comprehensive system ensures your artwork is always protected and compliant! 🎨✨
+This system ensures your photography is always protected and web-optimized! 🎨

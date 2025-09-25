@@ -10,4 +10,4 @@ Vérifier que tous tes commits Git sont avec l’email noreply GitHub.
 ✅ Ajouter un <meta name="description"> dans ton index.html.
 Ajouter OpenGraph tags pour partage social.
 Obfusquer ton email dans le code (ou basculer vers contact@alexclairr.com).
-convert all images to webp
+✅ convert all images to webp
