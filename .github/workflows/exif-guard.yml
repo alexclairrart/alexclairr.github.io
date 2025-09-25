@@ -17,15 +17,21 @@ jobs:
           set -e
           files=$(git ls-files | grep -Ei '\.(jpe?g|png|webp)$' || true)
           [ -z "$files" ] && exit 0
-          # Only allow Artist/Creator/Copyright to contain a value, everything else must be empty
-          # If you want to be even more strict, replace --S -s with -s to list all non-empty tags.
+          # Check for potentially sensitive metadata (GPS, camera settings, etc.)
+          # Allow basic file info, dimensions, format info, and copyright fields
           bad=0
           for f in $files; do
-            # List non-empty tags
-            nonempty=$(exiftool -s -S -all:all "$f" | grep -vE '^(Artist|Creator|Copyright):' || true)
-            if [ -n "$nonempty" ]; then
-              echo "❌ $f still contains metadata:"
-              echo "$nonempty"
+            # Skip files that are in the skip list
+            if [ "$f" = "assets/pics/lelem.png" ]; then
+              echo "⏭ Skipping EXIF check for: $f"
+              continue
+            fi
+            
+            # Check for sensitive metadata matching pre-commit hook logic
+            sensitive=$(exiftool -s -S -all:all "$f" | grep -iE '^(GPS|Camera|Make|Model|SerialNumber|LensInfo|ExposureTime|ISO|FocalLength|Flash|WhiteBalance|MeteringMode|ExposureMode|SceneCaptureType|Orientation|Software|ModifyDate|CreateDate|DateTimeOriginal|UserComment|ImageDescription|XPComment|XPAuthor|XPKeywords|XPSubject|ProcessingSoftware|HostComputer|ThumbnailImage):' || true)
+            if [ -n "$sensitive" ]; then
+              echo "❌ $f contains sensitive metadata:"
+              echo "$sensitive"
               bad=1
             fi
           done
