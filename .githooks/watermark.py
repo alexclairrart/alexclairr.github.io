@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Invisible watermarking script for Alex Clairr photography portfolio
-Handles watermarking and verification of images
+Handles watermarking and verification of WebP images
 """
 
 import cv2
@@ -14,7 +14,7 @@ WATERMARK_TEXT = b"\xc2\xa9 Alex Clairr 2025"  # © Alex Clairr 2025 in UTF-8
 ALGORITHM = "dwtDctSvd"
 
 # Images to skip from watermarking and verification
-SKIP_FILES = {"assets/pics/lelem.png"}
+SKIP_FILES = {"assets/pics/lelem.webp"}
 
 
 class ImageWatermarker:
@@ -24,7 +24,7 @@ class ImageWatermarker:
         self.decoder = WatermarkDecoder("bytes", len(WATERMARK_TEXT) * 8)
 
     def apply_watermark(self, image_path):
-        """Apply invisible watermark to an image"""
+        """Apply invisible watermark to a WebP image"""
         # Check if file should be skipped
         if str(image_path) in SKIP_FILES:
             return True, f"Skipped (in skip list): {image_path}"
@@ -37,29 +37,18 @@ class ImageWatermarker:
         try:
             img = cv2.imread(str(image_path))
             if img is None:
-                return False, f"Could not read image: {image_path}"
+                return False, f"Could not read WebP image: {image_path}"
 
-            # Apply watermark
+            # Apply watermark and save as WebP
             watermarked = self.encoder.encode(img, ALGORITHM)
-
-            # Convert JPEG to PNG to preserve watermark (JPEG compression destroys it)
-            if str(image_path).lower().endswith((".jpg", ".jpeg")):
-                # Convert to PNG
-                png_path = str(image_path).rsplit(".", 1)[0] + ".png"
-                success = cv2.imwrite(png_path, watermarked)
-                if success:
-                    # Remove original JPEG
-                    os.remove(image_path)
-                    return True, f"Converted to PNG and watermarked: {png_path}"
-            else:
-                success = cv2.imwrite(str(image_path), watermarked)
+            success = cv2.imwrite(str(image_path), watermarked)
 
             return success, None
         except Exception as e:
             return False, str(e)
 
     def verify_watermark(self, image_path, skip_check=True):
-        """Check if image contains the watermark"""
+        """Check if WebP image contains the watermark"""
         # Check if file should be skipped (unless called internally)
         if skip_check and str(image_path) in SKIP_FILES:
             return True, f"Skipped (in skip list): {image_path}"
@@ -67,7 +56,7 @@ class ImageWatermarker:
         try:
             img = cv2.imread(str(image_path))
             if img is None:
-                return False, f"Could not read image: {image_path}"
+                return False, f"Could not read WebP image: {image_path}"
 
             # Try to decode watermark
             decoded = self.decoder.decode(img, ALGORITHM)
@@ -80,10 +69,10 @@ class ImageWatermarker:
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python watermark.py <command> [file1] [file2] ...")
+        print("Usage: python watermark.py <command> [webp_file1] [webp_file2] ...")
         print("Commands:")
-        print("  apply <files...>   - Apply watermark to files")
-        print("  verify <files...>  - Verify watermark exists in files")
+        print("  apply <webp_files...>   - Apply watermark to WebP files")
+        print("  verify <webp_files...>  - Verify watermark exists in WebP files")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -99,12 +88,10 @@ def main():
                     print(f"⏭ {message}")
                 elif "Already watermarked" in str(message):
                     print(f"✓ {message}")
-                elif "Converted to PNG" in str(message):
-                    print(f"🔄 {message}")
                 else:
                     print(f"✓ Watermarked: {file_path}")
             else:
-                print(f"✗ Failed to watermark {file_path}: {message}")
+                print(f"✗ Failed to watermark WebP {file_path}: {message}")
                 sys.exit(1)
 
     elif command == "verify":

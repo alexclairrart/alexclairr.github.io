@@ -1,28 +1,28 @@
-name: exif-guard
+name: webp-exif-guard
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
-  check-exif:
+  check-webp-exif:
     if: github.actor != 'github-actions[bot]' # avoid loops
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install exiftool
         run: sudo apt-get update && sudo apt-get install -y exiftool
-      - name: Scan images for metadata
+      - name: Scan WebP images for metadata
         run: |
           set -e
-          files=$(git ls-files | grep -Ei '\.(jpe?g|png|webp)$' || true)
+          files=$(git ls-files | grep -Ei '\.webp$' || true)
           [ -z "$files" ] && exit 0
-          # Check for potentially sensitive metadata (GPS, camera settings, etc.)
+          # Check WebP images for potentially sensitive metadata (GPS, camera settings, etc.)
           # Allow basic file info, dimensions, format info, and copyright fields
           bad=0
           for f in $files; do
             # Skip files that are in the skip list
-            if [ "$f" = "assets/pics/lelem.png" ]; then
+            if [ "$f" = "assets/pics/lelem.webp" ]; then
               echo "⏭ Skipping EXIF check for: $f"
               continue
             fi
@@ -30,11 +30,11 @@ jobs:
             # Check for sensitive metadata matching pre-commit hook logic
             sensitive=$(exiftool -s -S -all:all "$f" | grep -iE '^(GPS|Camera|Make|Model|SerialNumber|LensInfo|ExposureTime|ISO|FocalLength|Flash|WhiteBalance|MeteringMode|ExposureMode|SceneCaptureType|Orientation|Software|ModifyDate|CreateDate|DateTimeOriginal|UserComment|ImageDescription|XPComment|XPAuthor|XPKeywords|XPSubject|ProcessingSoftware|HostComputer|ThumbnailImage):' || true)
             if [ -n "$sensitive" ]; then
-              echo "❌ $f contains sensitive metadata:"
+              echo "❌ WebP file $f contains sensitive metadata:"
               echo "$sensitive"
               bad=1
             else
-              echo "✓ EXIF verified: $f"
+              echo "✓ WebP EXIF verified: $f"
             fi
           done
           exit $bad

@@ -350,7 +350,7 @@
           <div class="contact-info">
             <p>for inquiries and collaborations</p>
             <img
-              src="assets/pics/lelem.png"
+              src="assets/pics/lelem.webp"
               alt="lelem"
               style="
                 max-width: 200px;
@@ -399,32 +399,26 @@
       const carouselContainer = document.getElementById("carouselContainer");
 
       let currentImageIndex = 0;
-      const totalImages = 111; // Total number of PNG files
+      const totalImages = 111; // Total number of WebP files
 
       // Generate image paths and create img elements
       function initializeCarousel() {
         const imageWrapper = document.getElementById("imageWrapper");
 
-        // Create images dynamically trying PNG first, then JPG
+        // Create images dynamically using WebP format
         for (let i = 1; i <= totalImages; i++) {
           const imgNumber = String(i).padStart(3, "0"); // Format as 001, 002, etc.
           const img = document.createElement("img");
-          img.src = `assets/pics/${imgNumber}.png`; // Try PNG first
+          img.src = `assets/pics/${imgNumber}.webp`; // Use WebP format
           img.alt = `Photography ${i}`;
           img.className = "carousel-image";
           if (i === 1) {
             img.classList.add("active");
           }
 
-          // Add error handling - try JPG if PNG fails
+          // Add error handling for missing WebP files
           img.addEventListener("error", function () {
-            // First try JPG format
-            if (this.src.endsWith(".png")) {
-              this.src = `assets/pics/${imgNumber}.jpg`;
-              return; // Don't create fallback yet, try JPG first
-            }
-
-            // If both PNG and JPG failed, show fallback
+            // Show fallback if WebP fails to load
             const fallbackDiv = document.createElement("div");
             fallbackDiv.className = "image-fallback";
             fallbackDiv.textContent = `image ${i} not found`;

@@ -24,22 +24,22 @@ echo "[pre-commit] Starting comprehensive image processing..."
 # ===== PART 1: Process new/modified images =====
 echo "[pre-commit] Step 1: Processing new/modified images..."
 
-# List of STAGED files for this commit (additions/modifications), terminated by NUL
-staged_images=$(git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -Ei '\.(jpe?g|png|webp)$' || true)
+# List of STAGED WebP files for this commit (additions/modifications), terminated by NUL
+staged_images=$(git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -Ei '\.webp$' || true)
 
 if [ -n "$staged_images" ]; then
   echo "[pre-commit] Found new/modified images:"
   echo "$staged_images" | sed 's/^/  - /'
   echo
 
-  # Process each staged image
+  # Process each staged WebP image
   git diff --cached --name-only -z --diff-filter=ACM \
   | while IFS= read -r -d '' f; do
     case "$f" in
-      *.jpg|*.jpeg|*.JPG|*.JPEG|*.png|*.PNG|*.webp|*.WEBP)
-        echo "[pre-commit] Processing new image: $f"
+      *.webp|*.WEBP)
+        echo "[pre-commit] Processing new WebP image: $f"
         
-        # 1) Apply invisible watermark (may convert JPG to PNG)
+        # 1) Apply invisible watermark
         if "$PYTHON" "$WATERMARK_SCRIPT" apply "$f"; then
           echo "[pre-commit] ✓ Watermark applied: $f"
         else
@@ -47,70 +47,49 @@ if [ -n "$staged_images" ]; then
           exit 1
         fi
         
-        # 2) Determine which file to process for EXIF (JPG may have been converted to PNG)
-        if [ -f "$f" ]; then
-          # Original file still exists
-          target_file="$f"
-        else
-          # File was converted (JPG to PNG)
-          base_name="${f%.*}"
-          target_file="${base_name}.png"
-        fi
+        # 2) Clean EXIF and add copyright
+        exiftool -overwrite_original \
+          -all= \
+          -Artist="$AUTHOR" \
+          -XMP-dc:Creator="$AUTHOR" \
+          -Copyright="$COPY" \
+          "$f" >/dev/null
         
-        # 3) Clean EXIF and add copyright on the target file
-        if [ -f "$target_file" ]; then
-          exiftool -overwrite_original \
-            -all= \
-            -Artist="$AUTHOR" \
-            -XMP-dc:Creator="$AUTHOR" \
-            -Copyright="$COPY" \
-            "$target_file" >/dev/null
-          
-          # 4) Re-stage the processed file
-          git add -- "$target_file"
-          echo "[pre-commit] ✓ EXIF processed and re-staged: $target_file"
-          
-          # 5) If original was converted, unstage the deleted JPG
-          if [ "$target_file" != "$f" ]; then
-            git rm --cached "$f" 2>/dev/null || true
-            echo "[pre-commit] ✓ Removed original JPG from staging: $f"
-          fi
-        else
-          echo "[pre-commit] ✗ Could not find target file: $target_file"
-          exit 1
-        fi
+        # 3) Re-stage the processed file
+        git add -- "$f"
+        echo "[pre-commit] ✓ EXIF processed and re-staged: $f"
       ;;
     esac
   done
 else
-  echo "[pre-commit] No new/modified images in this commit."
+  echo "[pre-commit] No new/modified WebP images in this commit."
 fi
 
 # ===== PART 2: Validate STAGED images only =====
 echo
 echo "[pre-commit] Step 2: Validating staged images in this commit..."
 
-# Get staged image files for this commit (including processed ones from Part 1)
-staged_images=$(git diff --cached --name-only | grep -Ei '\.(jpe?g|png|webp)$' || true)
+# Get staged WebP files for this commit (including processed ones from Part 1)
+staged_images=$(git diff --cached --name-only | grep -Ei '\.webp$' || true)
 
 if [ -z "$staged_images" ]; then
-  echo "[pre-commit] No staged images to validate."
+  echo "[pre-commit] No staged WebP images to validate."
 else
-  echo "[pre-commit] Checking $(echo "$staged_images" | wc -l) staged images for watermarks and EXIF compliance..."
+  echo "[pre-commit] Checking $(echo "$staged_images" | wc -l) staged WebP images for watermarks and EXIF compliance..."
 
-  # Check watermarks on staged images only
-  echo "[pre-commit] Verifying watermarks on staged images..."
+  # Check watermarks on staged WebP images only
+  echo "[pre-commit] Verifying watermarks on staged WebP images..."
   if ! "$PYTHON" "$WATERMARK_SCRIPT" verify $staged_images; then
     echo "[pre-commit] ✗ Some staged images are missing watermarks!"
     exit 1
   fi
 
-  # Check EXIF on staged images only (skip files in skip list)
-  echo "[pre-commit] Verifying EXIF compliance on staged images..."
+  # Check EXIF on staged WebP images only (skip files in skip list)
+  echo "[pre-commit] Verifying EXIF compliance on staged WebP images..."
   bad_exif=0
   for f in $staged_images; do
     # Skip files that are in the skip list
-    if [ "$f" = "assets/pics/lelem.png" ]; then
+    if [ "$f" = "assets/pics/lelem.webp" ]; then
       echo "[pre-commit] ⏭ Skipping EXIF check for: $f"
       continue
     fi
@@ -126,15 +105,36 @@ else
   done
 
   if [ $bad_exif -eq 1 ]; then
-    echo "[pre-commit] ✗ Some staged images have unauthorized EXIF data!"
+    echo "[pre-commit] ✗ Some staged WebP images have unauthorized EXIF data!"
     exit 1
   fi
 fi
 
-echo "[pre-commit] ✓ All images passed validation!"
-echo "[pre-commit] Image processing complete."
+echo "[pre-commit] ✓ All WebP images passed validation!"
+echo "[pre-commit] WebP image processing complete."
+
+# ===== PART 3: Check for unauthorized image formats =====
+echo
+echo "[pre-commit] Step 3: Checking for unauthorized image formats in assets..."
+
+# Check for any image files in assets that are not .webp or .ico
+unauthorized_images=$(find assets -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.gif" -o -iname "*.bmp" -o -iname "*.tiff" -o -iname "*.svg" \) 2>/dev/null || true)
+
+if [ -n "$unauthorized_images" ]; then
+  echo "[pre-commit] ✗ Found unauthorized image formats in assets directory:"
+  echo "$unauthorized_images" | sed 's/^/  - /'
+  echo
+  echo "Only .webp and .ico files are allowed in the assets directory."
+  echo "Please convert these images to WebP format using:"
+  echo "  python scripts/convert_to_webp.py --overwrite"
+  echo "Then remove the original files."
+  exit 1
+else
+  echo "[pre-commit] ✓ No unauthorized image formats found in assets directory."
+fi
 
 # ===== PART 4: Increment VERSION file =====
+echo
 echo "[pre-commit] Step 4: Incrementing version..."
 
 # Check if VERSION file exists

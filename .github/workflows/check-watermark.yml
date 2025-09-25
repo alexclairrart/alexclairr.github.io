@@ -1,11 +1,11 @@
-name: check-watermark
+name: check-webp-watermark
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
-  check-watermark:
+  check-webp-watermark:
     if: github.actor != 'github-actions[bot]' # avoid loops
     runs-on: ubuntu-latest
     steps:
@@ -35,24 +35,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Verify watermarks on all images
+      - name: Verify watermarks on all WebP images
         run: |
           set -e
 
-          # Get all image files in the repository
-          files=$(git ls-files | grep -Ei '\.(jpe?g|png|webp)$' || true)
+          # Get all WebP files in the repository
+          files=$(git ls-files | grep -Ei '\.webp$' || true)
 
           if [ -z "$files" ]; then
-            echo "No images found in repository."
+            echo "No WebP images found in repository."
             exit 0
           fi
 
-          echo "Checking $(echo "$files" | wc -l) images for watermarks..."
+          echo "Checking $(echo "$files" | wc -l) WebP images for watermarks..."
 
-          # Use the watermark script to verify all images
+          # Use the watermark script to verify all WebP images
           if python .githooks/watermark.py verify $files; then
-            echo "✓ All images have valid watermarks!"
+            echo "✓ All WebP images have valid watermarks!"
           else
-            echo "✗ Some images are missing watermarks!"
+            echo "✗ Some WebP images are missing watermarks!"
             exit 1
           fi

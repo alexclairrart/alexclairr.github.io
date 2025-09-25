@@ -43,7 +43,7 @@ Developer Workflow:
 
 - Converts JPEG to PNG to preserve watermarks
 - Validates ONLY staged/modified images for fast commits
-- Skips specific files (e.g., `assets/pics/lelem.png`)
+- Skips specific files (e.g., `assets/pics/lelem.webp`)
 - Blocks commits if validation fails
 
 **Dependencies:**
@@ -275,7 +275,7 @@ alexclairr.github.io/
 ├── assets/pics/                 # Image gallery
 │   ├── 001.jpg → 001.png       # Auto-converted by pre-commit
 │   ├── 002.png                 # Processed images
-│   └── lelem.png               # Skip-listed file
+│   └── lelem.webp               # Skip-listed file
 ├── docu/
 │   └── image-validation.md     # This documentation
 ├── requirements.txt            # Python dependencies
@@ -330,7 +330,7 @@ To exclude specific files from validation, update the skip lists:
 Example:
 
 ```bash
-if [ "$f" = "assets/pics/lelem.png" ]; then
+if [ "$f" = "assets/pics/lelem.webp" ]; then
     echo "⏭ Skipping EXIF check for: $f"
     continue
 fi
@@ -388,7 +388,7 @@ When everything works correctly, you'll see output like:
 ```
 ✓ EXIF verified: assets/pics/001.png
 ✓ EXIF verified: assets/pics/002.png
-⏭ Skipping EXIF check for: assets/pics/lelem.png
+⏭ Skipping EXIF check for: assets/pics/lelem.webp
 ✓ Watermark verified: assets/pics/001.png
 ✓ Watermark verified: assets/pics/002.png
 ```
