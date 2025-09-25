@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+AUTHOR="Alex Clairr"
+COPY="© $(date +%Y) Alex Clairr"
+
+echo "[pre-commit] EXIF processing - Checking for images to process..."
+
+# List of STAGED files for this commit (additions/modifications), terminated by NUL
+image_files=$(git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -Ei '\.(jpe?g|png|webp)$' || true)
+
+if [ -z "$image_files" ]; then
+  echo "[pre-commit] EXIF processing - No images found in commit. Skipping EXIF processing."
+  exit 0
+fi
+
+echo "[pre-commit] EXIF processing - Found images to process:"
+echo "$image_files" | sed 's/^/  - /'
+echo
+
+# Go back over the list (with NUL) to properly handle spaces/accents
+git diff --cached --name-only -z --diff-filter=ACM \
+| while IFS= read -r -d '' f; do
+  case "$f" in
+    *.jpg|*.jpeg|*.JPG|*.JPEG|*.png|*.PNG|*.webp|*.WEBP)
+      echo "[pre-commit] EXIF processing - Processing: $f"
+      # 1) Clear all metadata
+      # 2) Keep only the author (Artist/Creator) and Copyright
+      exiftool -overwrite_original \
+        -all= \
+        -Artist="$AUTHOR" \
+        -XMP-dc:Creator="$AUTHOR" \
+        -Copyright="$COPY" \
+        "$f" >/dev/null
+
+      # Re-stage the modified file
+      git add -- "$f"
+      echo "[pre-commit] ✓ Processed and re-staged: $f"
+    ;;
+  esac
+done
+
+echo "[pre-commit] EXIF processing complete."

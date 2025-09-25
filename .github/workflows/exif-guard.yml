@@ -1,0 +1,32 @@
+name: exif-guard
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check-exif:
+    if: github.actor != 'github-actions[bot]' # avoid loops
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install exiftool
+        run: sudo apt-get update && sudo apt-get install -y exiftool
+      - name: Scan images for metadata
+        run: |
+          set -e
+          files=$(git ls-files | grep -Ei '\.(jpe?g|png|webp)$' || true)
+          [ -z "$files" ] && exit 0
+          # Only allow Artist/Creator/Copyright to contain a value, everything else must be empty
+          # If you want to be even more strict, replace --S -s with -s to list all non-empty tags.
+          bad=0
+          for f in $files; do
+            # List non-empty tags
+            nonempty=$(exiftool -s -S -all:all "$f" | grep -vE '^(Artist|Creator|Copyright):' || true)
+            if [ -n "$nonempty" ]; then
+              echo "❌ $f still contains metadata:"
+              echo "$nonempty"
+              bad=1
+            fi
+          done
+          exit $bad
