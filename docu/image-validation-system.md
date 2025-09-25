@@ -19,6 +19,8 @@ Developer Workflow:
 │                 │    │   Validation     │    │   Validation        │
 │ • Add images    │    │ • EXIF cleanup   │    │ • EXIF verification │
 │ • Modify files  │    │ • Watermarking   │    │ • Watermark check   │
+│                 │    │ • Fast (staged   │    │ • Comprehensive     │
+│                 │    │   files only)    │    │   (all files)       │
 └─────────────────┘    └──────────────────┘    └─────────────────────┘
                               │                           │
                               ▼                           ▼
@@ -40,7 +42,7 @@ Developer Workflow:
 **Key features:**
 
 - Converts JPEG to PNG to preserve watermarks
-- Validates ALL images in repository for compliance
+- Validates ONLY staged/modified images for fast commits
 - Skips specific files (e.g., `assets/pics/lelem.png`)
 - Blocks commits if validation fails
 
@@ -78,10 +80,11 @@ Developer Workflow:
 
 **What it does:**
 
-- Scans all images for invisible watermark presence
+- Scans ALL images in repository for invisible watermark presence
 - Uses the same watermarking script as pre-commit hook
 - Respects skip lists for excluded files
 - Fails if any image is missing a watermark
+- Provides comprehensive watermark validation (unlike pre-commit's staged-only check)
 
 ### 3. Local Testing Script (`test-github-workflows.sh`)
 
@@ -156,20 +159,22 @@ When you add new images to the repository:
 
    ```bash
    git commit -m "Add new artwork"
-   # Pre-commit automatically:
-   # - Applies invisible watermark
+   # Pre-commit automatically (FAST - only processes staged files):
+   # - Applies invisible watermark to new/modified images
    # - Converts JPEG to PNG if needed
    # - Strips sensitive EXIF data
    # - Adds copyright information
    # - Re-stages processed files
+   # - Validates only the images you're committing
    ```
 
 3. **Push triggers GitHub validation:**
    ```bash
    git push
-   # GitHub Actions verify:
-   # - No sensitive metadata present
-   # - All images have watermarks
+   # GitHub Actions verify (COMPREHENSIVE - checks all 100+ images):
+   # - No sensitive metadata present in ANY image
+   # - ALL images have watermarks
+   # - Complete repository compliance
    ```
 
 ### Testing Locally
@@ -184,6 +189,56 @@ Before pushing, you can test the exact GitHub workflows:
 ./test-exif-local.sh      # Simple EXIF check
 ./test-watermark-local.sh # Simple watermark check
 ```
+
+## ⚡ Performance Optimization
+
+The system is designed for optimal developer experience:
+
+### **Pre-commit Hook (Fast)**
+
+- ✅ **Processes only staged files** - New/modified images in current commit
+- ✅ **Quick validation** - Only validates images being committed
+- ✅ **Fast commits** - No need to check entire repository
+- ⚠️ **Limited scope** - Doesn't catch issues in existing files
+
+### **GitHub Actions (Comprehensive)**
+
+- ✅ **Validates ALL images** - Complete repository scan
+- ✅ **Catches everything** - No issues slip through to deployment
+- ✅ **Final safety net** - Comprehensive validation before publish
+- ⚠️ **Slower execution** - Scans 100+ images but ensures complete compliance
+
+### **Why This Design Works:**
+
+1. **Developer productivity** - Fast local commits encourage frequent saves
+2. **Complete security** - GitHub Actions ensure nothing malicious reaches production
+3. **Early feedback** - Most issues caught locally during development
+4. **Final validation** - Comprehensive check before deployment
+
+## ⚡ Performance Optimization
+
+The system is designed for optimal developer experience:
+
+### **Pre-commit Hook (Fast)**
+
+- ✅ **Processes only staged files** - New/modified images in current commit
+- ✅ **Quick validation** - Only validates images being committed
+- ✅ **Fast commits** - No need to check entire repository
+- ⚠️ **Limited scope** - Doesn't catch issues in existing files
+
+### **GitHub Actions (Comprehensive)**
+
+- ✅ **Validates ALL images** - Complete repository scan
+- ✅ **Catches everything** - No issues slip through to deployment
+- ✅ **Final safety net** - Comprehensive validation before publish
+- ⚠️ **Slower execution** - Scans 100+ images but ensures complete compliance
+
+### **Why This Design Works:**
+
+1. **Developer productivity** - Fast local commits encourage frequent saves
+2. **Complete security** - GitHub Actions ensure nothing malicious reaches production
+3. **Early feedback** - Most issues caught locally during development
+4. **Final validation** - Comprehensive check before deployment
 
 ## 🔒 Security Features
 
