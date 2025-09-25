@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>alex clairr</title>
     <link rel="icon" href="assets/favicon.ico" type="image/x-icon" />
-
-    // canonical link for SEO
     <link rel="canonical" href="https://alexclairr.com/" />
 
     <meta
@@ -307,6 +305,20 @@
             <a href="#" class="nav-link" data-section="contact">contact</a>
           </li>
         </ul>
+        <div
+          id="version-info"
+          style="
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            right: 40px;
+            font-size: 10px;
+            color: #999;
+            text-align: center;
+          "
+        >
+          loading version...
+        </div>
       </nav>
 
       <main class="main-content">
@@ -488,6 +500,34 @@
 
       // Show first section by default
       document.querySelector('.nav-link[data-section="bestiaire"]').click();
+
+      // Fetch latest commit SHA from GitHub API
+      async function fetchLatestCommit() {
+        try {
+          const response = await fetch(
+            "https://api.github.com/repos/alexclairrart/alexclairr.github.io/commits/main"
+          );
+          const data = await response.json();
+          const shortSha = data.sha.substring(0, 7);
+          const commitDate = new Date(data.commit.author.date)
+            .toISOString()
+            .split("T")[0];
+
+          document.getElementById("version-info").innerHTML = `
+            <a href="https://github.com/alexclairrart/alexclairr.github.io/commit/${data.sha}" 
+               target="_blank" 
+               style="color: #999; text-decoration: none; transition: opacity 0.3s ease;">
+              v${shortSha} (${commitDate})
+            </a>
+          `;
+        } catch (error) {
+          document.getElementById("version-info").textContent =
+            "version unavailable";
+        }
+      }
+
+      // Fetch version info when page loads
+      fetchLatestCommit();
     </script>
   </body>
 </html>
