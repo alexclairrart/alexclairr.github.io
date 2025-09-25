@@ -393,22 +393,29 @@
       function initializeCarousel() {
         const imageWrapper = document.getElementById("imageWrapper");
 
-        // Create images for all PNG files (001.png to 111.png)
+        // Create images dynamically trying PNG first, then JPG
         for (let i = 1; i <= totalImages; i++) {
           const imgNumber = String(i).padStart(3, "0"); // Format as 001, 002, etc.
           const img = document.createElement("img");
-          img.src = `assets/pics/${imgNumber}.jpg`;
+          img.src = `assets/pics/${imgNumber}.png`; // Try PNG first
           img.alt = `Photography ${i}`;
           img.className = "carousel-image";
           if (i === 1) {
             img.classList.add("active");
           }
 
-          // Add error handling for each image
+          // Add error handling - try JPG if PNG fails
           img.addEventListener("error", function () {
+            // First try JPG format
+            if (this.src.endsWith(".png")) {
+              this.src = `assets/pics/${imgNumber}.jpg`;
+              return; // Don't create fallback yet, try JPG first
+            }
+
+            // If both PNG and JPG failed, show fallback
             const fallbackDiv = document.createElement("div");
             fallbackDiv.className = "image-fallback";
-            fallbackDiv.textContent = `image ${i}`;
+            fallbackDiv.textContent = `image ${i} not found`;
 
             if (this.classList.contains("active")) {
               fallbackDiv.classList.add("active");
