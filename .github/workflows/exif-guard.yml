@@ -33,6 +33,8 @@ jobs:
               echo "❌ $f contains sensitive metadata:"
               echo "$sensitive"
               bad=1
+            else
+              echo "✓ EXIF verified: $f"
             fi
           done
           exit $bad
